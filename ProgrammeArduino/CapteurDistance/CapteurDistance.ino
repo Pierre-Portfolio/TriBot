@@ -12,3 +12,9 @@ void loop()
   Serial.println(val);            // prints the value of the sensor to the serial monitor
   delay(1000);                    // wait for this much time before printing next value
 }
+
+// CAPTEUR DE DISTANCE VALUE
+// RIEN A VOIR = 30 a 63
+// 20 cm => 300
+// 10 CM -> 500
+// 5 cm -> 600
