@@ -1,11 +1,6 @@
 #include <SoftPWM.h>
 #include <HX711.h>
 #include <assert.h>
-#include <DigitalIO.h>
-
-
-
-
 
 
 /////// DEBUT REGLAGES
@@ -14,7 +9,6 @@
 #define PIN_POID_DATA 15
 #define PIN_POID_CLOCK 14
 
-#define PIN_DISTANCE A3
 
 //Pont en H A - CHenille - PID & INTERRUPT
 //moteur 1
@@ -41,16 +35,13 @@
 #define AVG 4
 
 //distance de test
-#define DISTANCE_MM 200000
+#define DISTANCE_MM 200
 
-//Puissance du moteur utilise pour le test au demarrage. doit etre suffisament puissant pour demarrer, mais suffisament lent pour ne rien casser si le moteur ne freine pas car un capteur est dysfonctionnel
-#define MOTOR_TEST_PWM 120
-#define MOTOR_TEST_TIMEOUT_MS 500
 
 //temps en MS d'attente pour que les moteurs cessent de tourner. IMPORTANT : Le moteur doit toujours être à l'arrêt avant de changer de direction, sinon grille pont en H. Ce temos doit suffir pour qu'un moteur qui tourne soit (a peu près) arrêté
-#define WAIT_STOP_MS 500
+#define WAIT_STOP_MS 250
 
-#define STALL_FACTOR 1.5f //Facteur de temps entre la durée de la dernière interruption et le point à partir du quel on considère que le moteur est 'calé' et donc qu'il ne tourne plus (Et ne passe plus devant le capteur, donc on ne peut plus lire ça vitesse)
+#define STALL_FACTOR 2.0f //Facteur de temps entre la durée de la dernière interruption et le point à partir du quel on considère que le moteur est 'calé' et donc qu'il ne tourne plus (Et ne passe plus devant le capteur, donc on ne peut plus lire ça vitesse)
 
 #define MINIMUM_INTERUPT_MICROS 2000 //Temps minimum possible entre deux interuptions (Un demi tour de l'axe moteur). (Pour éviter les signaux parasite) 2000 microsecondes -> 15000 RPM, peu de chance que le moteur aille plus vite que ça
 
@@ -60,36 +51,12 @@
 //rayon de la chenille
 #define WHEEL_RADIUS_MM (130/2)
 
-//puissance du moteur pour fermer la poubelle
-#define POWER_CLOSING_POUBELLE 15
-//nombre de demi-tour pour fermer la poubelle !! IMPRECIS !! Prévoir de la marge en créant du mou !
-#define IMPULSE_CLOSING_POUBELLE 5
-//duree maximale pour fermer la poubelle !! S'ARRETERA TROP TOP SI TROP FAIBLE !
-#define MS_TIMEOUT_CLOSING_POUBELLE 2000
 
-//puissance du moteur pour ouvrir la poubelle
-#define POWER_OPENING_POUBELLE 60
-//nombre de demi-tour pour ouvrir la poubelle !! INFINI !! ON TIRE LA FICELLE AU MAX POUR ETRE SUR DE LA REMONTER A FOND, PAS DE LIMITE DE TOUR. LE MOTEUR FORCERA ET S'ARRETERA AU BON MOMENT.
-#define IMPULSE_OPENING_POUBELLE 9999
-//duree maximale pour ouvrir la poubelle !! NE DOIT PAS ETRE TROP GRANDE !! LE MOTEUR FORCERA PENDANT TOUT CE TEMPS !!
-#define MS_TIMEOUT_OPENING_POUBELLE 1000
-
-//nombre de d'echantillons utilisee pour mesurer la distance au travers d'une moyenne.
-#define DISTANCE_AVG 10
-
-//Facteur PID google it
-#define kp (1.4*0.15f) //005 //proportionelle
-#define ki (2.53*0.02f) // integrale
-#define kd (0.1395*0.05f) // derivé
-
-//Precharge des moteurs au démarrage pour qu'il commence avec un peu de vitesse plutot que de partir de 0 (plus rapide et evite de surcharger l'alim quand ils arrivent pas à demarrer)
-#define PID_ERROR_SUM_PRELOAD 600
-/*
 //Facteur PID google it
 #define kp (1.4*0.55f)
 #define ki (2.53*0.50f)
 #define kd (0.1395*0.35f)
-*/
+
 /*
  *  OLD
 #define kp 0.25f
@@ -134,7 +101,7 @@ void init_PID_data(PID_data * data){
   }
 
   data->total_pass = 0;
-  data->error_sum = PID_ERROR_SUM_PRELOAD;
+  data->error_sum = 0;
   data->last_error = 0;
 
 }
@@ -203,7 +170,7 @@ void ISR_hall_effect_motor2() {
 }
 
 void stop_motors_A(){
-  //SoftPWMSet(LED_BUILTIN, 0);
+  SoftPWMSet(LED_BUILTIN, 0);
 
   SoftPWMSet(D1A, 0);
   SoftPWMSet(D2A, 0);
@@ -214,7 +181,7 @@ void stop_motors_A(){
 }
 
 void stop_motors_B(){
-  //SoftPWMSet(LED_BUILTIN, 0);
+  SoftPWMSet(LED_BUILTIN, 0);
 
   SoftPWMSet(D1B, 0);
   SoftPWMSet(D2B, 0);
@@ -226,14 +193,14 @@ void stop_motors_B(){
 
 void set_power(int pin, int power){
     SoftPWMSet(pin, power);
-    //SoftPWMSet(LED_BUILTIN, power);
+    SoftPWMSet(LED_BUILTIN, power);
 }
 
 
 
 
 //calcul rapide
-#define mm_per_pass ((float)((2*3.14f*WHEEL_RADIUS_MM)/7.5f)/2.0f)
+#define mm_per_pass ((float)((2*3.14f*WHEEL_RADIUS_MM)/7.5f)/2.0)
 
 
 //PID google it
@@ -273,13 +240,13 @@ void do_PID(PID_data * data,int pin, float rps_target){
     Serial.print(data->rps_actual);
     Serial.print(" cmd ");
     Serial.print(command);
-    Serial.print(" tgt ");
-    Serial.println(rps_target);
+    Serial.print(" rps_target ");
+    Serial.print(rps_target);
+    Serial.print(" ms ");
+    Serial.println(millis());
 
     if(command < 0) command = 0;
     if(command > 255) command = 255;
-
-//    if(data == &PID_motor_2) return;
     set_power(pin,command);
 }
 
@@ -302,8 +269,13 @@ void run_motors_chenille(long distance_mm, long mm_per_sec, bool direction){
   Serial.print(" mm at ");
   Serial.print(mm_per_sec);
   Serial.print(" mm/s (");
+  Serial.print(mm_per_pass);
+  Serial.print(" mm_per_pass ");
+  Serial.print(wanted_total_pass );
+  Serial.print(" pulses (");
   Serial.print(rpm);
   Serial.println(" RPM)");
+  
 
 
 //  hall_tick(false);
@@ -317,22 +289,12 @@ void run_motors_chenille(long distance_mm, long mm_per_sec, bool direction){
   int pin_1 = direction?D1A:D2A;
   int pin_2 = direction?D3A:D4A;
 
-  set_power(pin_1,255);
-  set_power(pin_2,255);
-  delay(20);
-  set_power(pin_1,0);
-  set_power(pin_2,0);
-
-
   init_PID_data(&PID_motor_1);
   init_PID_data(&PID_motor_2);
 
   for(long i = 0 ; 1 ; i++){
-//    Serial.println("p");
-    if( (long) millis() < last_loop_millis+PID_LOOP_MS) continue; //on saute la boucle si le temps n'est pas encore arrivée de l'exectuer. (Plus précis que delay)
-
-//    Serial.println("PID");
-
+    if( (long)millis() < last_loop_millis+PID_LOOP_MS) continue; //on saute la boucle si le temps n'est pas encore arrivée de l'exectuer. (Plus précis que delay)
+    last_loop_millis = millis();
     do_PID(&PID_motor_1,pin_1,rps_target);
     do_PID(&PID_motor_2,pin_2,rps_target);
 
@@ -349,67 +311,6 @@ void run_motors_chenille(long distance_mm, long mm_per_sec, bool direction){
 }
 
 
-
-bool run_motor_for_impulse(int pin_motor, int pin_sensor, int power, long count, long ms_timeout){
-  Serial.println("Run on impulse");
-
-  delay(WAIT_STOP_MS);
-  
-  long counter = 0;
-
-  long start_ms = millis();
-
-  bool last_state = digitalRead(pin_sensor);
-
-  set_power(pin_motor,power);
-
-  while(counter < count && millis()-start_ms < ms_timeout)
-  {
-//    Serial.println(millis()-start_ms);
-    bool now_state = digitalRead(pin_sensor);
-
-    if(last_state == false && now_state == true) { //signal montant
-      counter++;
-    }
-    
-    last_state = now_state;
-  }
-
-  set_power(pin_motor,0);
-  delay(WAIT_STOP_MS);  
-
-  Serial.println("Ran");
-  
-  return (counter < count); //true si pas assez de count
-}
-
-
-
-
-
-void fermer_poubelle(bool est_premiere_poubelle){
-  Serial.print("Fermeture de la ");
-  Serial.print(est_premiere_poubelle?"premiere":"deuxieme");
-  Serial.println(" poubelle");
-
-  int pin_motor = est_premiere_poubelle?D2B:D4B;
-  int pin_sensor = est_premiere_poubelle?PIN_HALL_MOTOR3:PIN_HALL_MOTOR4;
-
-  run_motor_for_impulse(pin_motor,pin_sensor,POWER_CLOSING_POUBELLE,IMPULSE_CLOSING_POUBELLE,MS_TIMEOUT_CLOSING_POUBELLE);
-}
-
-
-
-void ouvrir_poubelle(bool est_premiere_poubelle){
-  Serial.print("Ouverture de la ");
-  Serial.print(est_premiere_poubelle?"premiere":"deuxieme");
-  Serial.println(" poubelle");
-
-  int pin_motor = est_premiere_poubelle?D1B:D3B;
-  int pin_sensor = est_premiere_poubelle?PIN_HALL_MOTOR3:PIN_HALL_MOTOR4;
-
-  run_motor_for_impulse(pin_motor,pin_sensor,POWER_OPENING_POUBELLE,IMPULSE_OPENING_POUBELLE,MS_TIMEOUT_OPENING_POUBELLE);
-}
 
 //FIN LOGIQUE
 
@@ -454,18 +355,15 @@ HX711 scale;
 
 void setup_poid(){
   scale.begin(PIN_POID_DATA, PIN_POID_CLOCK);
-  // decommentez ses 2 lignes une fois calibrage terminé
-  //scale.set_scale(LOADCELL_DIVIDER);
-  //scale.set_offset(LOADCELL_OFFSET);
-  scale.set_scale(); //retier apres calib
-  scale.tare(); //retirer apres cqlib
+  scale.set_scale(LOADCELL_DIVIDER);
+  scale.set_offset(LOADCELL_OFFSET);
 
   delay(200);
   
-  poid_machine = scale.get_units(LOADCELL_AVG);
   Serial.print("Poid sur capteur :");
-  Serial.println(poid_machine);
+  Serial.println(scale.get_units(LOADCELL_AVG));
   
+  poid_machine = scale.get_units(LOADCELL_AVG);
 }
 
 float mesurer_poid(){
@@ -478,24 +376,12 @@ float mesurer_poid(){
 
 
 
-//DEBUT DISTANCE
-int measure_distance_cm(){
 
-  float total = 0;
-  for(int i = 0 ; i < DISTANCE_AVG ;i++){
-    total += analogRead(PIN_DISTANCE);
-    delay(10); 
-  }
-  long val = total/DISTANCE_AVG;
-  int cm = (700-val)*5/100;
-  Serial.print("Distance : ");
-  Serial.print(cm);
-  Serial.print(" cm val : ");
-  Serial.print(val);
-  Serial.println("/1024");
-  return cm;
-}
-//FIN DISTANCE
+
+
+
+
+
 
 
 
@@ -571,8 +457,8 @@ void setup() {
   SoftPWMBegin();
 
   //pour faire joli
-  //SoftPWMSet(LED_BUILTIN, 0);
-  //SoftPWMSetFadeTime(LED_BUILTIN, 0, 0);
+  SoftPWMSet(LED_BUILTIN, 0);
+  SoftPWMSetFadeTime(LED_BUILTIN, 0, 0);
   
   pinMode(D1A, OUTPUT);
   pinMode(D2A, OUTPUT);
@@ -603,79 +489,15 @@ void setup() {
   SoftPWMSet(D4B, 0);
   SoftPWMSetFadeTime(D4B, 0, 0);  
 
-  pinMode(PIN_DISTANCE, INPUT); 
-
   pinMode(PIN_HALL_MOTOR1, INPUT_PULLUP); //pullup semble réduire les interférence, enfin peut-être, j'ai pas (encore) les outils pour vérifier.
   pinMode(PIN_HALL_MOTOR2, INPUT_PULLUP); //pullup semble réduire les interférence, enfin peut-être, j'ai pas (encore) les outils pour vérifier.
   pinMode(PIN_HALL_MOTOR3, INPUT_PULLUP); //pullup semble réduire les interférence, enfin peut-être, j'ai pas (encore) les outils pour vérifier.
   pinMode(PIN_HALL_MOTOR4, INPUT_PULLUP); //pullup semble réduire les interférence, enfin peut-être, j'ai pas (encore) les outils pour vérifier.
 
-  setup_poid();
-
-  
-  delay(100);
-
-  /*
-  Serial.println("Tests moteurs ...");
-
-
-  if(run_motor_for_impulse(D1A, PIN_HALL_MOTOR1, MOTOR_TEST_PWM, 1, MOTOR_TEST_TIMEOUT_MS)){
-    Serial.println("Moteur D1A (moteur 1 sens 1) ne tourne pas ou capteur debranche");
-    while(1);
-  }
-  if(run_motor_for_impulse(D2A, PIN_HALL_MOTOR1, MOTOR_TEST_PWM, 1, MOTOR_TEST_TIMEOUT_MS)){
-    Serial.println("Moteur D2A (moteur 1 sens 2) ne tourne pas ou capteur debranche");
-    while(1);
-  }
-  if(run_motor_for_impulse(D3A, PIN_HALL_MOTOR2, MOTOR_TEST_PWM, 1, MOTOR_TEST_TIMEOUT_MS)){
-    Serial.println("Moteur D3A (moteur 2 sens 1) ne tourne pas ou capteur debranche");
-    while(1);
-  }
-  if(run_motor_for_impulse(D4A, PIN_HALL_MOTOR2, MOTOR_TEST_PWM, 1, MOTOR_TEST_TIMEOUT_MS)){
-    Serial.println("Moteur D4A (moteur 2 sens 2) ne tourne pas ou capteur debranche");
-    while(1);
-  }
-
-  Serial.println("TEST DES MOTEURS DE FICELLES SAUTES, REMETTRE QUAND ILS SERONT BRANCHES !!!");
-  Serial.println("TEST DES MOTEURS DE FICELLES SAUTES, REMETTRE QUAND ILS SERONT BRANCHES !!!");
-  Serial.println("TEST DES MOTEURS DE FICELLES SAUTES, REMETTRE QUAND ILS SERONT BRANCHES !!!");
-  if(run_motor_for_impulse(D1B, PIN_HALL_MOTOR3, MOTOR_TEST_PWM, 1, MOTOR_TEST_TIMEOUT_MS)){
-    Serial.println("Moteur D1B ne tourne pas ou capteur debranche");
-    while(1);
-  }
-  if(run_motor_for_impulse(D2B, PIN_HALL_MOTOR3, MOTOR_TEST_PWM, 1, MOTOR_TEST_TIMEOUT_MS)){
-    Serial.println("Moteur D2B ne tourne pas ou capteur debranche");
-    while(1);
-  }
-  if(run_motor_for_impulse(D3B, PIN_HALL_MOTOR4, MOTOR_TEST_PWM, 1, MOTOR_TEST_TIMEOUT_MS)){
-    Serial.println("Moteur D3B ne tourne pas ou capteur debranche");
-    while(1);
-  }
-  if(run_motor_for_impulse(D4B, PIN_HALL_MOTOR4, MOTOR_TEST_PWM, 1, MOTOR_TEST_TIMEOUT_MS)){
-    Serial.println("Moteur D4B ne tourne pas ou capteur debranche");
-    while(1);
-  }
-
-   
-  Serial.println("Tests reussis");
-
-
-  //
-  // COMMENTER LE BLOC SI LES POUBELLES DECONNES
-  //
-  /*
-  Serial.println("Tests des poubelles ...");
-  ouvrir_poubelle(true);
-  fermer_poubelle(true);
-  ouvrir_poubelle(false);
-  fermer_poubelle(false);
-  Serial.println("Tests réussis");
-  */
-
-
   attachInterrupt(digitalPinToInterrupt(PIN_HALL_MOTOR1),ISR_hall_effect_motor1,RISING);//recommended for arduino board
   attachInterrupt(digitalPinToInterrupt(PIN_HALL_MOTOR2),ISR_hall_effect_motor2,RISING);//recommended for arduino board
 
+  //setup_poid();
 }
 
 
@@ -685,28 +507,7 @@ void setup() {
 void loop() {
 
   while(1){
-
-    Serial.println("En attente d'un objet");
-    
-    if(measure_distance_cm() < 20) {
-  
-      Serial.println("Objet detecte !");
-
-      bool est_premiere_poubelle = true;
-      //est_premiere_poubelle = mesurer_poid() > POID_ACTIVATION; //PREMIER POUBELLE SI LE POID EST SUPPERIEUR A POID_ACTIAVTION. DEUXIEME POUBELLE SI INFERFIEUR OU EGALE 
-      delay(2000);
-      ouvrir_poubelle(est_premiere_poubelle);
-      run_motors_chenille((long)DISTANCE_MM,2000, false);
-      fermer_poubelle(est_premiere_poubelle);
-
-      Serial.println("Fin du traitement de l'objet");
-
-      
-      delay(1000);
-      
-    }
-
-
+      run_motors_chenille((long)DISTANCE_MM,1000, false);
   }
   
   delay(100);

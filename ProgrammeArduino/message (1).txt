@@ -1,0 +1,305 @@
+#include <SoftPWM.h>
+#include <assert.h>
+
+//Pont en H A - CHenille - PID & INTERRUPT
+//moteur 1
+#define D1A 1
+#define D2A 1
+#define PIN_HALL_MOTOR1 2 //INTERRUPT
+//moteur 2
+#define D3A 1
+#define D4A 1
+#define PIN_HALL_MOTOR2 2 //INTERRUPT
+
+//Pont en H B - Poubelles - PWM Fixe & lecture analogue
+//moteur 3
+#define D1B 1
+#define D2B 1
+#define PIN_HALL_MOTOR3 2 //NOT INTERRUPT
+//moteur 4
+#define D3B 1
+#define D4B 1
+#define PIN_HALL_MOTOR4 2 //NOT INTERRUPT
+
+
+
+#define SEC_DIRECTION 10
+#define SEC_RIEN 1
+
+
+//puissance PWM pour PRESQUE dénarrer un moteur. Ça permet de gagner du temps au démarrage en évitant de partir d'une force de 0
+#define START_PWM 30
+
+
+//temps en MS d'attente pour que les moteurs cessent de tourner. IMPORTANT : Le moteur doit toujours être à l'arrêt avant de changer de direction, sinon grille pont en H. Ce temos doit suffir pour qu'un moteur qui tourne soit (a peu près) arrêté
+#define WAIT_STOP_MS 250
+
+
+//Les interruption simulées sont prises en compte dans ces valeurs
+volatile unsigned long long  time_last_pass = 0; //heure en MICROSECONDES de la dernière interruption. 
+volatile unsigned long long duration_last_pass = 0; //durée en MICROSECONDES entre les deux dernière interruptions
+volatile float rps_actual = 0; //rotation par secondes du dernier tour
+volatile float rps_last = 0; //rotation par secondes de l'avant dernier tour
+
+//Nombre de points pour faire la moyenne de vitesse (Corrige l'instabilité des capteurs de vitesse)
+#define AVG 4
+volatile int cnt_avg = 0;
+volatile float tab_avg[AVG]; //tableau roulant pour avoir une moyenne sur les 4 dernières valeurs
+
+
+volatile unsigned long long time_real_last_pass = 0; //heure en MICROSECONDES de la dernière interruption SANS COMPTER LES SIMULÉES
+
+
+#define STALL_FACTOR 2.0f //Facteur de temps entre la durée de la dernière interruption et le point à partir du quel on considère que le moteur est 'calé' et donc qu'il ne tourne plus (Et ne passe plus devant le capteur, donc on ne peut plus lire ça vitesse)
+
+
+unsigned long long compute_duration_hall_effect(unsigned long long now){ //Calcul combien de temps s'est passé depuis la dernière interruption
+  if(time_last_pass == -1) return -1;
+  return now-time_last_pass;
+}
+
+
+#define MINIMUM_INTERUPT_MICROS 3000 //Temps minimum possible entre deux interuptions (Un demi tour de l'axe moteur). (Pour éviter les signaux parasite)
+
+//Enregistre une interruption
+//Stall : Mettre oui si le moteur ne tourne plus et qu'on veut SIMULER un passage de capteur afin de permettre le recalcul de la vitesse (On ne peut pas mesurer la vitesse si le moteur ne tourne pas puis-ce qu'il ne passe pas devant le capteur)
+void hall_tick(bool stall){
+  unsigned long long now = micros();
+  
+  if(now-time_real_last_pass < (unsigned long long)MINIMUM_INTERUPT_MICROS) return; //SI L'INTERRUPTION EST TROP RAPIDE -> REJET DES ACTIVATIONS PARASITES
+
+  if(!stall){ // Si tout se passe bien
+    
+    duration_last_pass = compute_duration_hall_effect(now);
+    time_last_pass = now;  
+    time_real_last_pass = now;
+
+  } else { //Si le moteur ne tourne plus
+    
+    duration_last_pass = duration_last_pass*STALL_FACTOR*2;  //On simule une valeur de vitesse qui ralentie
+  }
+
+  if(duration_last_pass > 0){
+    tab_avg[cnt_avg] = 1000000/(float)duration_last_pass; //calcul des tour/s en fonction de la durée en microsecondes
+    cnt_avg++;
+    if(cnt_avg == AVG){
+      cnt_avg = 0;
+    }
+
+    //moyenne de la vitesse
+    rps_last = rps_actual;
+    rps_actual = 0;
+    for(int i = 0 ; i< AVG ; i++){
+      rps_actual += tab_avg[i]/AVG;
+    }
+    
+  } else if(duration_last_pass == -1){ //Toute première interruption, on ne peut pas calculer la vitesse puis-ce qu'il en faut 2
+    rps_actual = 0;
+    rps_last = 0;
+  }
+  
+}
+
+
+//Récepteur d'interruption
+void ISR_hall_effect() { 
+  hall_tick(false);
+}
+
+void setup() {
+  Serial.begin(57600);
+  SoftPWMBegin();
+  SoftPWMSet(LED_BUILTIN, 0);
+  SoftPWMSetFadeTime(LED_BUILTIN, 0, 0);
+  
+  pinMode(D1A, OUTPUT);
+  pinMode(D2A, OUTPUT);
+  pinMode(D3A, OUTPUT);
+  pinMode(D4A, OUTPUT);
+  pinMode(D1B, OUTPUT);
+  pinMode(D2B, OUTPUT);
+  pinMode(D3B, OUTPUT);
+  pinMode(D4B, OUTPUT);
+
+  pinMode(PIN_HALL_MOTOR1, INPUT_PULLUP);
+  pinMode(PIN_HALL_MOTOR2, INPUT_PULLUP);
+  pinMode(PIN_HALL_MOTOR3, INPUT_PULLUP);
+  pinMode(PIN_HALL_MOTOR4, INPUT_PULLUP);
+
+  attachInterrupt(digitalPinToInterrupt(PIN_HALL_MOTOR1),ISR_hall_effect,RISING);//recommended for arduino board
+}
+
+void stop_motors_A(){
+  SoftPWMSet(LED_BUILTIN, 0);
+
+  analogWrite(D1A, 0);
+  analogWrite(D2A, 0);
+  analogWrite(D3A, 0);
+  analogWrite(D4A, 0);
+
+  delay(WAIT_STOP_MS);
+}
+
+void stop_motors_B(){
+  SoftPWMSet(LED_BUILTIN, 0);
+
+  analogWrite(D1B, 0);
+  analogWrite(D2B, 0);
+  analogWrite(D3B, 0);
+  analogWrite(D4B, 0);
+
+  delay(WAIT_STOP_MS);
+}
+
+void set_power(int pin, int power){
+    analogWrite(pin, power);
+    SoftPWMSet(LED_BUILTIN, power);
+}
+
+
+#define LOOP_MS 30
+
+//Facteur PID google it
+#define kp (1.4*0.55f)
+#define ki (2.53*0.50f)
+#define kd (0.1395*0.35f)
+
+/*
+ *  OLD
+#define kp 0.25f
+#define ki 0.1f
+#define kd 0.85f
+ */
+
+
+void run_motor(long ms, int pin, long rpm){
+
+  //calcul du nombre d'impulsions (interruptions) attendues pour la vitesse souhaitée (2 par tour de moteur)
+  float ms_per_impulse = 1000000/(rpm/60.0f)/2;
+
+  //stop les moteurs pour être sur que personne ne tourne
+  stop_motors_A();
+
+  float power = START_PWM; //start power
+
+  Serial.print("Run pin");
+  Serial.print(pin);
+  Serial.print(" for ");
+  Serial.print(ms);
+  Serial.print(" ms at ");
+  Serial.print(rpm);
+  Serial.println("RPM");
+
+  Serial.print(ms_per_impulse);
+  Serial.println(" microseconds between impulses");
+
+  //initialisation des infos des interruptions
+  time_last_pass = -1;
+  duration_last_pass = -1;
+  cnt_avg = 0;
+  for(int i = 0 ; i< AVG ; i++){
+    tab_avg[i] = 0;
+  }
+
+  hall_tick(false);
+
+  float last_error = 0;
+  float error_sum = 0;
+
+  long last_loop_millis = -999;
+  long start_time_millis = millis();
+
+  for(long i = 0 ; millis() < start_time_millis+ms ; i+= LOOP_MS){
+
+    if( millis() < last_loop_micro+LOOP_MS) continue; //on saute la boucle si le temps n'est pas encore arrivée de l'exectuer. (Plus précis que delay)
+
+
+    unsigned long long now = micros();
+    unsigned long long current_duration = compute_duration_hall_effect(now);
+
+  //Si on calcule que l'impulsion actuelle dure depuis beaucoup trop longtemps (Et donc que le moteur a probablement calé)
+    if(current_duration > duration_last_pass*STALL_FACTOR){
+      Serial.print("S");
+      hall_tick(true); //On simule une interuption en mode 'calé'
+    }
+    
+    float rps_target = 1000000/ms_per_impulse;
+
+    //PID google it
+    float error = rps_target-rps_actual;
+    error_sum += error*(LOOP_MS/1000.0f);
+    float error_derivate = (error-last_error)/(LOOP_MS/1000.0f);;
+    last_error = error;
+
+    float kpe =  kp*error ;
+    float kie = ki*error_sum;
+    float kid = kd*error_derivate;
+
+    float command = kpe + kie + kid;
+    
+    /*
+    Serial.print(" rps_target ");
+    Serial.print(rps_target);
+    Serial.print(" error ");
+    Serial.print(error);
+    Serial.print(" error_sum ");
+    Serial.print(error_sum);
+    Serial.print(" error_derivate ");
+    Serial.print(error_derivate);
+    */
+    
+    for(int i = 0 ; i < 100 ; i++){
+      if((long)rps_actual == i){
+        Serial.print("#");
+      }else if((long)rps_target == i){
+        Serial.print("|");
+      }else{
+        Serial.print(" ");          
+      }
+    }
+    Serial.print("= rps_actual ");
+    Serial.print(rps_actual);
+/*
+    Serial.print(" ke ");
+    Serial.print(kpe);
+    Serial.print(" ki ");
+    Serial.print(error_sum);
+    Serial.print(" kd ");
+    Serial.print(error_derivate);
+    */
+    Serial.print(" cmd ");
+    Serial.print(command);
+    Serial.print(" ms ");
+    Serial.println(millis());
+
+    
+
+    
+/*
+    Serial.print("cmd ");
+    Serial.println(command);
+*/
+    power = command;
+  
+
+    if(power < 0) power = 0;
+    if(power > 255) power = 255;
+    set_power(pin,power);
+  }
+
+  stop_motors_A();
+  Serial.println("Run motor end");
+}
+
+
+void loop() {
+
+
+    for(int i = 1 ; i <= 6 ; i++){
+      run_motor((long)SEC_DIRECTION*1000,D1A,i*300);
+      
+    }
+
+    delay(SEC_RIEN*1000);
+
+}
