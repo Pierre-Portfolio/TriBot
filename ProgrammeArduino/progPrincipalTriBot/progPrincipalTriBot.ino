@@ -3,14 +3,7 @@
 #include <assert.h>
 #include <DigitalIO.h>
 
-
-
-
-
-
 /////// DEBUT REGLAGES
-
-
 #define PIN_POID_DATA 15
 #define PIN_POID_CLOCK 14
 
@@ -84,19 +77,6 @@
 
 //Precharge des moteurs au démarrage pour qu'il commence avec un peu de vitesse plutot que de partir de 0 (plus rapide et evite de surcharger l'alim quand ils arrivent pas à demarrer)
 #define PID_ERROR_SUM_PRELOAD 600
-/*
-//Facteur PID google it
-#define kp (1.4*0.55f)
-#define ki (2.53*0.50f)
-#define kd (0.1395*0.35f)
-*/
-/*
- *  OLD
-#define kp 0.25f
-#define ki 0.1f
-#define kd 0.85f
- */
-
 
 ////// FIN REGLAGES
 ////// DEBUG LOGIQUE
@@ -228,9 +208,6 @@ void set_power(int pin, int power){
     SoftPWMSet(pin, power);
     //SoftPWMSet(LED_BUILTIN, power);
 }
-
-
-
 
 //calcul rapide
 #define mm_per_pass ((float)((2*3.14f*WHEEL_RADIUS_MM)/7.5f)/2.0f)
@@ -383,10 +360,6 @@ bool run_motor_for_impulse(int pin_motor, int pin_sensor, int power, long count,
   return (counter < count); //true si pas assez de count
 }
 
-
-
-
-
 void fermer_poubelle(bool est_premiere_poubelle){
   Serial.print("Fermeture de la ");
   Serial.print(est_premiere_poubelle?"premiere":"deuxieme");
@@ -397,8 +370,6 @@ void fermer_poubelle(bool est_premiere_poubelle){
 
   run_motor_for_impulse(pin_motor,pin_sensor,POWER_CLOSING_POUBELLE,IMPULSE_CLOSING_POUBELLE,MS_TIMEOUT_CLOSING_POUBELLE);
 }
-
-
 
 void ouvrir_poubelle(bool est_premiere_poubelle){
   Serial.print("Ouverture de la ");
@@ -412,38 +383,13 @@ void ouvrir_poubelle(bool est_premiere_poubelle){
 }
 
 //FIN LOGIQUE
-
-
-
-
-
-
-
 //DEBUT POID
+//CALIBRER CES VALEURS 
+//https://github.com/bogde/HX711#how-to-calibrate-your-load-cell
+//DEUX POIDS CONNUS AVEC UNITE QUE TU VEUX, C'EST IMPORTANT PLUS BAS 
 
-
-
-
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!TU DOIS CALIBRER CES VALEURS TOI MEME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!   https://github.com/bogde/HX711#how-to-calibrate-your-load-cell   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!         IL TE FAUD DEUX POIDS CONNUS        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!        TU CHOISIS L'UNITE QUE TU VEUX, C'EST IMPORTANT PLUS BAS       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #define LOADCELL_OFFSET 340884 
 #define LOADCELL_DIVIDER 262.5f
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
 
 //nombre de mesure de poids utilise pour faire la moyenne (stabilisation du résultat)
 #define LOADCELL_AVG 50
@@ -474,10 +420,6 @@ float mesurer_poid(){
 
 
 //FIN POID
-
-
-
-
 //DEBUT DISTANCE
 int measure_distance_cm(){
 
@@ -497,61 +439,6 @@ int measure_distance_cm(){
 }
 //FIN DISTANCE
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 //==================Fonctions===============
 //
 //void run_motors_chenille(long distance_mm, long mm_per_sec, bool direction)
@@ -561,9 +448,6 @@ int measure_distance_cm(){
 //
 //float mesurer_poid()
 // retourne le poid dans l'unité que tu aura choisis en faisant la calibration plus haut
-
-
-
 
 
 void setup() {
