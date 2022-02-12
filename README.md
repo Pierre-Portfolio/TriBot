@@ -4,27 +4,27 @@
 
 ---
 
-# RESOLUTION EXHAUSTIVE D’UN REDICUBE
+# TRIBOT
 
 ## Petit résumé
 
-- Le Redi Cube est un variant du Rubik's Cube à trois couches sur lequel chaque virage déplace les trois bords autour de lui conçu par Oskar van Deventer en 2009 et publié par MoYu début juin 2017.
+- Tribot permet dans un contexte environnemental de trier les déchets de manière efficace selon des critères spécifiques. Elle s’adresse notamment à des professionnels soucieux de l’environnement, aux grandes surfaces, aux institutions publiques et à des entreprises. Un autre modèle sera fabriqué à plus petite échelle afin de pouvoir être utilisé par des ménages.
 
 ## Objectifs
 
-- Trouver le nombre de dieu du Redi Cube (nombre de mouvements maximum pour résoudre toutes les positions initiales possible).
-- Réaliser un algorithme de résolution.
+- Tri des déchets.
+- Régler les problèmes d’esthétisme.
+- Régler les problèmes d'odeur.
+- Gain de temps considérable
 
 ## Techno
 
-- Python
-- Spyder
+- Arduino
 
 ## UI
 <img src="./static/pictures/visu.png" alt="Redicube" />
 
 ## Auteur
 
-- [@Owen](https://github.com/owen974)
 - [@Pierre](https://github.com/Pierre-Portfolio)
 - [@OeTroV](https://github.com/OeTroV)
