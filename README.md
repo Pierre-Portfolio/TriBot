@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="./Assets/header.png" alt="Redicube" />
+  <img src="./Assets/header.png" alt="Tribot" />
 </h1>
 
 ---
@@ -15,7 +15,7 @@
 - Tri des déchets.
 - Régler les problèmes d’esthétisme.
 - Régler les problèmes d'odeur.
-- Gain de temps considérable
+- Gain de temps considérable.
 
 ## Techno
 
@@ -26,5 +26,6 @@
 
 ## Auteur
 
+- [@Anthony](https://github.com/Cyd-des-Tenebres)
 - [@Pierre](https://github.com/Pierre-Portfolio)
 - [@OeTroV](https://github.com/OeTroV)
