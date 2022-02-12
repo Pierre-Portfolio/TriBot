@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="./static/pictures/header.jpg" alt="Redicube" />
+  <img src="./Assets/header.png" alt="Redicube" />
 </h1>
 
 ---
