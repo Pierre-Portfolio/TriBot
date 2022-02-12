@@ -21,8 +21,8 @@
 
 - Arduino
 
-## UI
-<img src="./static/pictures/visu.png" alt="Redicube" />
+## Résultat
+<img src="./Assets/demo.gif" alt="TriBot" />
 
 ## Auteur
 
