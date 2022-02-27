@@ -8,7 +8,7 @@
 
 ## Petit résumé
 
-- Tribot permet dans un contexte environnemental de trier les déchets de manière efficace selon des critères spécifiques. Elle s’adresse notamment à des professionnels soucieux de l’environnement, aux grandes surfaces, aux institutions publiques et à des entreprises. Un autre modèle sera fabriqué à plus petite échelle afin de pouvoir être utilisé par des ménages.
+- Tribot est une poubelle qui permet de trier les déchets de manière efficace dans un contexte environnemental selon des critères spécifiques. Elle s’adresse notamment à des professionnels soucieux de l’environnement, aux grandes surfaces, aux institutions publiques et aux entreprises. Un modèle de taille réduite sera destiné aux ménages.
 
 ## Objectifs
 
