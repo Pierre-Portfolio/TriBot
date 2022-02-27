@@ -15,7 +15,7 @@
 - Tri des déchets.
 - Régler les problèmes d’esthétisme.
 - Régler les problèmes d'odeurs.
-- Gain de temps considérable.
+- Gain de temps conséquent.
 
 ## Techno
 
